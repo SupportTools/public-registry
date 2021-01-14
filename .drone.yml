@@ -15,6 +15,7 @@ steps:
       password:
         from_secret: docker-password
       context: ./router/
+      dockerfile: ./router/Dockerfile
     when:
       branch:
       - feature/*
@@ -31,6 +32,7 @@ steps:
       password:
         from_secret: docker-password
       context: ./router/
+      dockerfile: ./router/Dockerfile
     when:
       branch:
       - main
