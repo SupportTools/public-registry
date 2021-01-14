@@ -1,0 +1,122 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: registry-write
+  name: registry-write
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry-write
+  template:
+    metadata:
+      labels:
+        app: registry-write
+    spec:
+      containers:
+      - image: registry:2
+        imagePullPolicy: IfNotPresent
+        name: registry-write
+        volumeMounts:
+        - mountPath: /etc/docker/registry
+          name: config
+        - mountPath: /auth
+          name: htpasswd
+        - mountPath: /var/lib/registry
+          name: registry
+      volumes:
+      - configMap:
+          defaultMode: 256
+          items:
+          - key: registry-config.yml
+            path: config.yml
+          name: registry-write
+          optional: false
+        name: config
+      - name: htpasswd
+        secret:
+          defaultMode: 256
+          items:
+          - key: HTPASSWD
+            path: htpasswd
+          optional: false
+          secretName: registry-htpasswd
+      - name: registry
+        persistentVolumeClaim:
+          claimName: registry
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: registry-read
+  name: registry-read
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: registry-read
+  template:
+    metadata:
+      labels:
+        app: registry-read
+    spec:
+      containers:
+      - image: registry:2
+        imagePullPolicy: IfNotPresent
+        name: registry-read
+        volumeMounts:
+        - mountPath: /etc/docker/registry
+          name: config
+        - mountPath: /var/lib/registry
+          name: registry
+          readOnly: true
+      volumes:
+      - configMap:
+          defaultMode: 256
+          items:
+          - key: registry-config.yml
+            path: config.yml
+          name: registry-read
+          optional: false
+        name: config
+      - name: registry
+        persistentVolumeClaim:
+          claimName: registry
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: registry-router
+  name: registry-router
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: registry-router
+  template:
+    metadata:
+      labels:
+        app: registry-router
+    spec:
+      containers:
+      - image: supporttools/public-registry-router:BUILD_NUMBER
+        imagePullPolicy: IfNotPresent
+        name: router
+        volumeMounts:
+        - mountPath: /data/
+          name: htpasswd
+          readOnly: true
+      volumes:
+      - name: htpasswd
+        secret:
+          defaultMode: 256
+          items:
+          - key: HTPASSWD
+            mode: 420
+            path: htpasswd
+          optional: false
+          secretName: registry-htpasswd
