@@ -19,13 +19,35 @@ steps:
       context: ./router/
       dockerfile: ./router/Dockerfile
 
-  - name: customize-kube-files
+  - name: customize-kube-files-npd
     image: supporttools/kube-builder
     pull: true
-    environment:
-      APPENV: ${DRONE_COMMIT_BRANCH}
     commands:
-      - bash ./deploy.sh
+      - bash ./deploy.sh npd
+
+  - name: customize-kube-files-stg
+    image: supporttools/kube-builder
+    pull: true
+    commands:
+      - bash ./deploy.sh stg
+    when:
+     event:
+     - deployment
+     - promote
+     target:
+     - staging
+
+  - name: customize-kube-files-prd
+    image: supporttools/kube-builder
+    pull: true
+    commands:
+      - bash ./deploy.sh prd
+    when:
+     event:
+     - deployment
+     - promote
+     target:
+     - production
 
   - name: deploy-nonprod
     image: cube8021/drone-kubectl
