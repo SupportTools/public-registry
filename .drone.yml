@@ -4,28 +4,13 @@ type: kubernetes
 name: Public-Registry
 
 steps:
-  - name: docker-build-npd
-    image: plugins/docker
-    settings:
-      repo: supporttools/public-registry-router
-      tags:
-        - pr-${DRONE_BUILD_NUMBER}
-      username:
-        from_secret: docker-username
-      password:
-        from_secret: docker-password
-      context: ./router/
-      dockerfile: ./router/Dockerfile
-    when:
-      branch:
-      - feature/*
-
-  - name: docker-build-prd
+  - name: docker-build
     image: plugins/docker
     settings:
       repo: supporttools/public-registry-router
       tags:
         - ${DRONE_BUILD_NUMBER}
+        - ${DRONE_COMMIT_BRANCH}
         - latest
       username:
         from_secret: docker-username
@@ -33,6 +18,58 @@ steps:
         from_secret: docker-password
       context: ./router/
       dockerfile: ./router/Dockerfile
+
+  - name: customize-kube-files
+    image: supporttools/kube-builder
+    pull: true
+    environment:
+      APPENV: ${DRONE_COMMIT_BRANCH}
+    commands:
+      - bash ./deploy.sh
+
+  - name: deploy-nonprod
+    image: cube8021/drone-kubectl
+    settings:
+      kubernetes_server:
+        from_secret: k8s_server_npd
+      kubernetes_token:
+        from_secret: k8s_token_npd
+    commands:
+      - kubectl create ns registry-${DRONE_BUILD_NUMBER}
+      - kubectl label ns registry-${DRONE_BUILD_NUMBER} team=supporttools
+      - kubectl label ns registry-${DRONE_BUILD_NUMBER} app=registry
+      - kubectl label ns registry-${DRONE_BUILD_NUMBER} ns-purge=true
+      - kubectl annotate ns registry-${DRONE_BUILD_NUMBER} field.cattle.io/projectId=c-znsg6:p-vdzmc
+      - kubectl -n registry-${DRONE_BUILD_NUMBER} apply  -f ./deployment-ready/
+
+  - name: deploy-staging
+    image: cube8021/drone-kubectl
+    settings:
+      kubernetes_server:
+        from_secret: k8s_server_prod
+      kubernetes_token:
+        from_secret: k8s_token_prod
+    commands:
+      - kubectl apply -n registry-staging -f ./deployment-ready/
     when:
-      branch:
-      - main
+     event:
+     - deployment
+     - promote
+     target:
+     - staging
+
+  - name: deploy-production
+    image: cube8021/drone-kubectl
+    settings:
+      kubernetes_server:
+        from_secret: k8s_server_prod
+      kubernetes_token:
+        from_secret: k8s_token_prod
+    commands:
+      - kubectl apply -n registry-production -f ./deployment-ready/
+    when:
+     event:
+     - deployment
+     - promote
+     target:
+     - production
