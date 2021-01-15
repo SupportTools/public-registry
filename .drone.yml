@@ -68,9 +68,9 @@ steps:
     image: cube8021/drone-kubectl
     settings:
       kubernetes_server:
-        from_secret: k8s_server_prod
+        from_secret: k8s_server_prd
       kubernetes_token:
-        from_secret: k8s_token_prod
+        from_secret: k8s_token_prd
     commands:
       - kubectl apply -n registry-staging -f ./deployment-ready/
     when:
@@ -84,9 +84,9 @@ steps:
     image: cube8021/drone-kubectl
     settings:
       kubernetes_server:
-        from_secret: k8s_server_prod
+        from_secret: k8s_server_prd
       kubernetes_token:
-        from_secret: k8s_token_prod
+        from_secret: k8s_token_prd
     commands:
       - kubectl apply -n registry-production -f ./deployment-ready/
     when:
