@@ -1,0 +1,22 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 0m
+  labels:
+    app: registry
+  name: registry
+spec:
+  rules:
+  - host: registry-BUILD_NUMBER.support.tools
+    http:
+      paths:
+      - backend:
+          serviceName: registry-router
+          servicePort: 80
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - registry-BUILD_NUMBER.support.tools
+    secretName: star-support-tools
